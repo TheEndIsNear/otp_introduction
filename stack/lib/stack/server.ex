@@ -6,15 +6,18 @@ defmodule Stack.Server do
   def stop(server), do: GenServer.cast(server, :stop)
 
   def start_link(name, initial_state) do
-    GenServer.start_link(__MODULE__, initial_state, name: name)
+    GenServer.start_link(__MODULE__, {name, initial_state}, name: name)
   end
 
   @impl true
-  def init(initial_state), do: {:ok, initial_state}
+  def init({name, _} = initial_state) do
+    IO.puts("Starting #{name}")
+    {:ok, initial_state}
+  end
 
   @impl true
-  def handle_cast({:push, val}, state) do
-    {:noreply, [val | state]}
+  def handle_cast({:push, val}, {name, stack}) do
+    {:noreply, {name, [val | stack]}}
   end
 
   def handle_cast(:stop, state) do
@@ -22,11 +25,18 @@ defmodule Stack.Server do
   end
 
   @impl true
-  def handle_call(:pop, _, []) do
+  def handle_call(:pop, _, {_, []}) do
     {:reply, [], []}
   end
 
-  def handle_call(:pop, _, [hd | tl]) do
-    {:reply, hd, tl}
+  def handle_call(:pop, _, {name, [hd | tl]}) do
+    {:reply, hd, {name, tl}}
+  end
+
+  @impl true
+  def terminate(_reason, {name, _} = state) do
+    IO.puts("Server #{name} stopping...")
+
+    {:stop, state}
   end
 end
