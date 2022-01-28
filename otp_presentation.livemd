@@ -1,0 +1,178 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# Intro to OTP
+
+## What is OTP
+
+* Set of Patterns/Behaviors for common tasks.
+* A way to encapsulate state within a process.
+* Supervision of processes.
+* Concurrency within Elixir/Erlang
+
+## Simple Stack Example without GenServer
+
+```elixir
+defmodule SimpleStackExample do
+  def loop(state) do
+    receive do
+      {:push, val} ->
+        loop([val | state])
+
+      {:pop, pid} ->
+        {hd, tl} = pop(state)
+        send(pid, hd)
+        loop(tl)
+
+      _ ->
+        IO.puts("INVALID OPTION")
+        loop(state)
+    end
+  end
+
+  defp pop([]), do: {[], []}
+  defp pop([hd | tl]), do: {hd, tl}
+end
+
+pid = spawn(SimpleExample, :loop, [[1]])
+
+send(pid, {:push, 2})
+send(pid, {:pop, self()})
+send(pid, {:pop, self()})
+send(pid, {:pop, self()})
+
+IEx.Helpers.flush()
+```
+
+```output
+1
+2
+[]
+```
+
+```output
+:ok
+```
+
+## Simple Stack Example with GenServer
+
+```elixir
+defmodule SimpleStackExample2 do
+  use GenServer
+
+  def push(val), do: GenServer.cast(__MODULE__, {:push, val})
+  def pop, do: GenServer.call(__MODULE__, :pop)
+  def stop, do: GenServer.cast(__MODULE__, :stop)
+
+  def start_link(initial_state) do
+    GenServer.start_link(__MODULE__, initial_state, name: __MODULE__)
+  end
+
+  @impl true
+  def init(initial_state), do: {:ok, initial_state}
+
+  @impl true
+  def handle_cast({:push, val}, state) do
+    {:noreply, [val | state]}
+  end
+
+  def handle_cast(:stop, state) do
+    {:stop, :normal, state}
+  end
+
+  @impl true
+  def handle_call(:pop, _, []) do
+    {:reply, [], []}
+  end
+
+  def handle_call(:pop, _, [hd | tl]) do
+    {:reply, hd, tl}
+  end
+end
+
+SimpleStackExample2.start_link([1])
+
+SimpleStackExample2.push(5)
+SimpleStackExample2.push(3)
+IO.inspect(SimpleStackExample2.pop())
+IO.inspect(SimpleStackExample2.pop())
+IO.inspect(SimpleStackExample2.pop())
+SimpleStackExample2.stop()
+```
+
+```output
+3
+5
+```
+
+```output
+
+10:57:29.188 [error] GenServer SimpleStackExample2 terminating
+** (FunctionClauseError) no function clause matching in SimpleStackExample2.handle_call/3
+    Development/elixir-code/otp_presentation.livemd#cell:25: SimpleStackExample2.handle_call(:pop, {#PID<0.604.0>, [:alias | #Reference<0.2495992587.1490354180.143079>]}, 1)
+    (stdlib 3.16.1) gen_server.erl:721: :gen_server.try_handle_call/4
+    (stdlib 3.16.1) gen_server.erl:750: :gen_server.handle_msg/6
+    (stdlib 3.16.1) proc_lib.erl:226: :proc_lib.init_p_do_apply/3
+Last message (from #PID<0.604.0>): :pop
+State: 1
+Client #PID<0.604.0> is alive
+
+    (stdlib 3.16.1) gen.erl:233: :gen.do_call/4
+    (elixir 1.13.0) lib/gen_server.ex:1027: GenServer.call/3
+    (stdlib 3.16.1) erl_eval.erl:685: :erl_eval.do_apply/6
+    (stdlib 3.16.1) erl_eval.erl:893: :erl_eval.expr_list/6
+    (stdlib 3.16.1) erl_eval.erl:408: :erl_eval.expr/5
+    (elixir 1.13.0) src/elixir.erl:289: :elixir.recur_eval/3
+    (elixir 1.13.0) src/elixir.erl:274: :elixir.eval_forms/3
+    lib/livebook/evaluator.ex:319: Livebook.Evaluator.eval/3
+
+```
+
+## Simple Supervisor
+
+```elixir
+defmodule SimpleSupervisor do
+  use Supervisor
+
+  def start_link(initial_arg) do
+    Supervisor.start_link(__MODULE__, initial_arg)
+  end
+
+  def init(_initial_arg) do
+    children = [
+      %{
+        id: SimpleStackExample2,
+        start: {SimpleStackExample2, :start_link, [1]}
+      }
+    ]
+
+    Supervisor.init(children, strategy: :one_for_one)
+  end
+end
+
+sup = SimpleSupervisor.start_link([])
+
+IO.inspect(SimpleStackExample2.pop())
+```
+
+```output
+
+10:56:38.118 [error] GenServer SimpleStackExample2 terminating
+** (FunctionClauseError) no function clause matching in SimpleStackExample2.handle_call/3
+    Development/elixir-code/otp_presentation.livemd#cell:25: SimpleStackExample2.handle_call(:pop, {#PID<0.604.0>, [:alias | #Reference<0.2495992587.1490354179.145467>]}, 1)
+    (stdlib 3.16.1) gen_server.erl:721: :gen_server.try_handle_call/4
+    (stdlib 3.16.1) gen_server.erl:750: :gen_server.handle_msg/6
+    (stdlib 3.16.1) proc_lib.erl:226: :proc_lib.init_p_do_apply/3
+Last message (from #PID<0.604.0>): :pop
+State: 1
+Client #PID<0.604.0> is alive
+
+    (stdlib 3.16.1) gen.erl:233: :gen.do_call/4
+    (elixir 1.13.0) lib/gen_server.ex:1027: GenServer.call/3
+    (stdlib 3.16.1) erl_eval.erl:685: :erl_eval.do_apply/6
+    (stdlib 3.16.1) erl_eval.erl:893: :erl_eval.expr_list/6
+    (stdlib 3.16.1) erl_eval.erl:408: :erl_eval.expr/5
+    (elixir 1.13.0) src/elixir.erl:289: :elixir.recur_eval/3
+    (elixir 1.13.0) src/elixir.erl:274: :elixir.eval_forms/3
+    lib/livebook/evaluator.ex:319: Livebook.Evaluator.eval/3
+
+```
