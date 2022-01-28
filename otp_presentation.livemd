@@ -8,6 +8,7 @@
 * A way to encapsulate state within a process.
 * Supervision of processes.
 * Concurrency within Elixir/Erlang
+* And much, much more....
 
 ## Simple Stack Example without GenServer
 
@@ -39,11 +40,13 @@ send(pid, {:push, 2})
 send(pid, {:pop, self()})
 send(pid, {:pop, self()})
 send(pid, {:pop, self()})
+send(pid, :blah)
 
 IEx.Helpers.flush()
 ```
 
 ```output
+INVALID OPTION
 2
 1
 []
@@ -54,6 +57,10 @@ IEx.Helpers.flush()
 ```
 
 ## Simple Stack Example with GenServer
+
+* handle_cast - asychronous (podcast)
+* handle_call - sychronous (phonecall)
+* handle_info - usefull for handling any messages that are sent to the genserver
 
 ```elixir
 defmodule SimpleStackExample2 do
