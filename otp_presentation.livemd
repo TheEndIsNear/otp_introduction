@@ -33,7 +33,7 @@ defmodule SimpleStackExample do
   defp pop([hd | tl]), do: {hd, tl}
 end
 
-pid = spawn(SimpleExample, :loop, [[1]])
+pid = spawn(SimpleStackExample, :loop, [[1]])
 
 send(pid, {:push, 2})
 send(pid, {:pop, self()})
@@ -44,8 +44,8 @@ IEx.Helpers.flush()
 ```
 
 ```output
-1
 2
+1
 []
 ```
 
@@ -102,29 +102,11 @@ SimpleStackExample2.stop()
 ```output
 3
 5
+1
 ```
 
 ```output
-
-10:57:29.188 [error] GenServer SimpleStackExample2 terminating
-** (FunctionClauseError) no function clause matching in SimpleStackExample2.handle_call/3
-    Development/elixir-code/otp_presentation.livemd#cell:25: SimpleStackExample2.handle_call(:pop, {#PID<0.604.0>, [:alias | #Reference<0.2495992587.1490354180.143079>]}, 1)
-    (stdlib 3.16.1) gen_server.erl:721: :gen_server.try_handle_call/4
-    (stdlib 3.16.1) gen_server.erl:750: :gen_server.handle_msg/6
-    (stdlib 3.16.1) proc_lib.erl:226: :proc_lib.init_p_do_apply/3
-Last message (from #PID<0.604.0>): :pop
-State: 1
-Client #PID<0.604.0> is alive
-
-    (stdlib 3.16.1) gen.erl:233: :gen.do_call/4
-    (elixir 1.13.0) lib/gen_server.ex:1027: GenServer.call/3
-    (stdlib 3.16.1) erl_eval.erl:685: :erl_eval.do_apply/6
-    (stdlib 3.16.1) erl_eval.erl:893: :erl_eval.expr_list/6
-    (stdlib 3.16.1) erl_eval.erl:408: :erl_eval.expr/5
-    (elixir 1.13.0) src/elixir.erl:289: :elixir.recur_eval/3
-    (elixir 1.13.0) src/elixir.erl:274: :elixir.eval_forms/3
-    lib/livebook/evaluator.ex:319: Livebook.Evaluator.eval/3
-
+:ok
 ```
 
 ## Simple Supervisor
@@ -134,7 +116,7 @@ defmodule SimpleSupervisor do
   use Supervisor
 
   def start_link(initial_arg) do
-    Supervisor.start_link(__MODULE__, initial_arg)
+    Supervisor.start_link(__MODULE__, initial_arg, name: __MODULE__)
   end
 
   def init(_initial_arg) do
@@ -149,30 +131,16 @@ defmodule SimpleSupervisor do
   end
 end
 
-sup = SimpleSupervisor.start_link([])
-
-IO.inspect(SimpleStackExample2.pop())
+SimpleStackExample2.stop()
+{:ok, sup} = SimpleSupervisor.start_link([])
 ```
 
 ```output
+warning: variable "sup" does not exist and is being expanded to "sup()", please use parentheses to remove the ambiguity or change the variable name
+  otp_presentation.livemd#cell:20
 
-10:56:38.118 [error] GenServer SimpleStackExample2 terminating
-** (FunctionClauseError) no function clause matching in SimpleStackExample2.handle_call/3
-    Development/elixir-code/otp_presentation.livemd#cell:25: SimpleStackExample2.handle_call(:pop, {#PID<0.604.0>, [:alias | #Reference<0.2495992587.1490354179.145467>]}, 1)
-    (stdlib 3.16.1) gen_server.erl:721: :gen_server.try_handle_call/4
-    (stdlib 3.16.1) gen_server.erl:750: :gen_server.handle_msg/6
-    (stdlib 3.16.1) proc_lib.erl:226: :proc_lib.init_p_do_apply/3
-Last message (from #PID<0.604.0>): :pop
-State: 1
-Client #PID<0.604.0> is alive
+```
 
-    (stdlib 3.16.1) gen.erl:233: :gen.do_call/4
-    (elixir 1.13.0) lib/gen_server.ex:1027: GenServer.call/3
-    (stdlib 3.16.1) erl_eval.erl:685: :erl_eval.do_apply/6
-    (stdlib 3.16.1) erl_eval.erl:893: :erl_eval.expr_list/6
-    (stdlib 3.16.1) erl_eval.erl:408: :erl_eval.expr/5
-    (elixir 1.13.0) src/elixir.erl:289: :elixir.recur_eval/3
-    (elixir 1.13.0) src/elixir.erl:274: :elixir.eval_forms/3
-    lib/livebook/evaluator.ex:319: Livebook.Evaluator.eval/3
-
+```elixir
+Process.whereis(SimpleStackExample2)
 ```
